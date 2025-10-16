@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-nodejs-service
+  namespace: production
+  annotations:
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: "internet"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-force-override-listeners: "true"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-health-check-flag: "on"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-health-check-type: "tcp"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-health-check-connect-port: "3000"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-health-check-connect-timeout: "5"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-health-check-interval: "10"
+spec:
+  type: LoadBalancer
+  selector:
+    app: my-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+    protocol: TCP
+  externalTrafficPolicy: Cluster
