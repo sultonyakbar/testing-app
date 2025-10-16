@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p-nodejs-testing-deployment
+  namespace: production
+  labels:
+    app: nodejs-testing
+    env: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: p-nodejs
+      env: production
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: p-nodejs
+        env: production
+    spec:
+      containers:
+        - name: p-speedshop-bricksactive-id-backend
+          image: >-
+            registry.blubox.id
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          imagePullPolicy: Always
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: registry-secret
