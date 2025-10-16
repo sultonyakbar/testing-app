@@ -1,0 +1,29 @@
+docker build -t nodejs-app:latest .
+docker run -d -p 3000:3000 nodejs-app:latest
+docker tag nodejs:latest hub.docker.com/sultonyakbar/nodejs-app:1.0.0
+docker push hub.docker.com/sultonyakbar/nodejs-app:1.0.0
+root@NB-GDA-23221:/home/sultony/testing-app# docker login hub.docker.com
+Username: sultonyakbar
+Password:
+Error response from daemon: login attempt to https://hub.docker.com/v2/ failed with status: 404 Not Found
+root@NB-GDA-23221:/home/sultony/testing-app# docker login
+Log in with your Docker ID or email address to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com/ to create one.
+You can log in with your password or a Personal Access Token (PAT). Using a limited-scope PAT grants better security and is required for organizations using SSO. Learn more at https://docs.docker.com/go/access-tokens/
+
+Username: sultonyakbar
+Password:
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+
+
+---------
+
+kubectl get nodes
+kubectl create ns production
+    kubectl create secret generic registry-secret \
+      --from-file=.dockerconfigjson=/root/.docker/config.json> \
+      --type=kubernetes.io/dockerconfigjson \
+      --namespace=production
