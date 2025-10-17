@@ -3,15 +3,23 @@ kind: Service
 metadata:
   name: p-nodejs-service
   namespace: production
+  labels:
+    app: p-nodejs
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "classic"
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "10"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "5"
 spec:
-  externalTrafficPolicy: Local
-  ports:
-    - name: http
-      nodePort: 31101
-      port: 3000
-      protocol: TCP
-      targetPort: 3000
+  type: LoadBalancer
   selector:
     app: p-nodejs
-  sessionAffinity: None
-  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+    protocol: TCP
+  externalTrafficPolicy: Cluster
