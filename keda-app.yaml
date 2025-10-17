@@ -1,0 +1,24 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: p-nodejs-keda
+  namespace: production
+spec:
+  scaleTargetRef:
+    name: p-nodejs-testing-deployment
+    kind: Deployment
+  minReplicaCount: 2
+  maxReplicaCount: 5
+  cooldownPeriod: 30
+  pollingInterval: 15
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+      metricName: http_requests_per_pod
+      query: |
+        # Calculate requests per second per pod
+        sum(rate(http_requests_total{namespace="production", pod=~"p-nodejs-testing-deployment.+"}[2m])) 
+        / 
+        count(http_requests_total{namespace="production", pod=~"p-nodejs-testing-deployment.+"})
+      threshold: "50"
