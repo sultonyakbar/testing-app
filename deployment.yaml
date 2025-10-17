@@ -20,9 +20,9 @@ spec:
         env: production
     spec:
       containers:
-        - name: p-speedshop-bricksactive-id-backend
+        - name: p-nodejs
           image: >-
-            registry.blubox.id
+            sultonyakbar/nodejs-app:1.0.0
           ports:
             - containerPort: 3000
               protocol: TCP
