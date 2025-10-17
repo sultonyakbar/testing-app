@@ -28,10 +28,10 @@ spec:
               protocol: TCP
           resources:
             requests:
-              cpu: "50m"    # 0.1 CPU core
+              cpu: "0.5m"    # 0.1 CPU core
               memory: "64Mi" # 128 MB memory
             limits:
-              cpu: "100m"    # 0.2 CPU core
+              cpu: "1m"    # 0.2 CPU core
               memory: "128Mi" # 256 MB memory
           livenessProbe:
             httpGet:
