@@ -1,0 +1,155 @@
+logstashConfig:
+  logstash.yml: |
+    http.host: "0.0.0.0"
+    xpack.monitoring.enabled: false
+
+pipeline:
+  batch:
+    size: 125
+    delay: 50
+
+logstashPipeline:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+        host => "0.0.0.0"
+        codec => "json"
+      }
+    }
+
+    filter {
+      # Parse Kubernetes metadata
+      if [kubernetes] {
+        mutate {
+          add_field => {
+            "namespace" => "%{[kubernetes][namespace]}"
+            "pod_name" => "%{[kubernetes][pod][name]}"
+            "container_name" => "%{[kubernetes][container][name]}"
+            "app" => "%{[kubernetes][labels][app]}"
+            "environment" => "%{[kubernetes][labels][env]}"
+          }
+        }
+      }
+
+      # Parse timestamp
+      grok {
+        match => { 
+          "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:loglevel} %{GREEDYDATA:log_message}" 
+        }
+      }
+
+      # Categorize logs berdasarkan content
+      if [message] =~ /health/ or [log_message] =~ /health/ {
+        mutate {
+          add_field => { "log_type" => "health" }
+        }
+      } else if [loglevel] == "ERROR" or [loglevel] == "error" or [message] =~ /Error:/ {
+        mutate {
+          add_field => { "log_type" => "error" }
+        }
+      } else if [message] =~ /metrics/ or [log_message] =~ /metrics/ {
+        mutate {
+          add_field => { "log_type" => "metrics" }
+        }
+      } else {
+        mutate {
+          add_field => { "log_type" => "application" }
+        }
+      }
+
+      # Extract request details jika ada
+      grok {
+        match => { 
+          "message" => [
+            ".*method=%{WORD:http_method}.*url=%{URIPATHPARAM:url}.*status=%{NUMBER:status_code}.*responseTime=%{NUMBER:response_time:float}",
+            ".*%{WORD:http_method}.*%{URIPATHPARAM:url}.*%{NUMBER:status_code}"
+          ]
+        }
+      }
+
+      # Parse timestamp untuk @timestamp
+      date {
+        match => [ "timestamp", "ISO8601" ]
+        target => "@timestamp"
+        timezone => "UTC"
+      }
+
+      # Add event date fields untuk index naming
+      ruby {
+        code => "
+          event.set('index_date', event.get('@timestamp').time.localtime.strftime('%Y.%m.%d'))
+          event.set('index_month', event.get('@timestamp').time.localtime.strftime('%Y.%m'))
+        "
+      }
+    }
+
+    output {
+      # Default output untuk semua logs aplikasi
+      if [log_type] == "application" {
+        elasticsearch {
+          hosts => ["http://elasticsearch-master.logging:9200"]
+          index => "app-logs-%{+YYYY.MM.dd}"
+          document_type => "_doc"
+        }
+      }
+      
+      # Health check logs
+      else if [log_type] == "health" {
+        elasticsearch {
+          hosts => ["http://elasticsearch-master.logging:9200"]
+          index => "health-logs-%{+YYYY.MM.dd}"
+          document_type => "_doc"
+        }
+      }
+      
+      # Error logs
+      else if [log_type] == "error" {
+        elasticsearch {
+          hosts => ["http://elasticsearch-master.logging:9200"]
+          index => "error-logs-%{+YYYY.MM.dd}"
+          document_type => "_doc"
+        }
+      }
+      
+      # Metrics logs
+      else if [log_type] == "metrics" {
+        elasticsearch {
+          hosts => ["http://elasticsearch-master.logging:9200"]
+          index => "metrics-logs-%{+YYYY.MM.dd}"
+          document_type => "_doc"
+        }
+      }
+      
+      # Fallback
+      else {
+        elasticsearch {
+          hosts => ["http://elasticsearch-master.logging:9200"]
+          index => "other-logs-%{+YYYY.MM.dd}"
+          document_type => "_doc"
+        }
+      }
+
+      # Stdout untuk debugging (opsional)
+      stdout { 
+        codec => rubydebug 
+      }
+    }
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: beats
+      port: 5044
+      targetPort: 5044
+
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 200m
+  limits:
+    memory: 1Gi
+    cpu: 500m
+
+replicas: 1
